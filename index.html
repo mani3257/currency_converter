@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Converter</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Custom font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+    <!-- Main container -->
+    <div class="container bg-white w-full max-w-md mx-auto p-6 sm:p-8 rounded-2xl shadow-lg">
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-6 text-center">Currency Converter</h1>
+        <form>
+            <!-- Amount input section -->
+            <div class="amount mb-5">
+                <p class="text-sm font-medium text-slate-600 mb-2">Enter Amount</p>
+                <input placeholder="Enter Amount" type="number" class="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200"/>
+            </div>
+            <!-- From/To dropdowns section -->
+            <div class="drop-container flex items-center justify-between gap-4 mb-5">
+                <!-- 'From' currency -->
+                <div class="from w-full">
+                    <p class="text-sm font-medium text-slate-600 mb-2">From</p>
+                    <div class="select-container flex items-center border border-slate-300 rounded-lg p-2">
+                        <img src="https://flagsapi.com/US/flat/64.png" class="w-8 h-auto" />
+                        <select name="from" class="w-full bg-transparent border-none focus:outline-none ml-2 text-slate-700">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                </div>
+                <!-- Swap icon -->
+                <div class="mt-7">
+                   <i class="fa-solid fa-arrow-right-arrow-left text-slate-500 cursor-pointer hover:text-indigo-600 transition duration-200"></i>
+                </div>
+                <!-- 'To' currency -->
+                <div class="to w-full">
+                    <p class="text-sm font-medium text-slate-600 mb-2">To</p>
+                    <div class="select-container flex items-center border border-slate-300 rounded-lg p-2">
+                        <img src="https://flagsapi.com/IN/flat/64.png" class="w-8 h-auto" />
+                        <select name="to" class="w-full bg-transparent border-none focus:outline-none ml-2 text-slate-700">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <!-- Result message -->
+            <div class="msg text-center font-semibold text-slate-800 my-6 h-6"></div>
+            <!-- Submit button -->
+            <button class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 shadow-md hover:shadow-lg">Get Exchange Rate</button>
+        </form>
+    </div>
+
+    <script>
+        // --- JAVASCRIPT LOGIC ---
+
+        // Data for mapping currency codes to country codes for flags
+        const countryList = {
+            AED: "AE", AUD: "AU", BGN: "BG", BRL: "BR", CAD: "CA", CHF: "CH",
+            CNY: "CN", CZK: "CZ", DKK: "DK", EUR: "FR", GBP: "GB", HKD: "HK",
+            HUF: "HU", IDR: "ID", ILS: "IL", INR: "IN", ISK: "IS",
+            JPY: "JP", KRW: "KR", MXN: "MX", MYR: "MY", NOK: "NO", NZD: "NZ",
+            PHP: "PH", PLN: "PL", RON: "RO", RUB: "RU", SEK: "SE", SGD: "SG",
+            THB: "TH", TRY: "TR", USD: "US", ZAR: "ZA",
+        };
+
+        // Selecting all necessary DOM elements
+        const dropdowns = document.querySelectorAll(".container select");
+        const btn = document.querySelector("form button");
+        const fromCurr = document.querySelector(".from select");
+        const toCurr = document.querySelector(".to select");
+        const msg = document.querySelector(".msg");
+        const amountInput = document.querySelector(".amount input");
+        const swapIcon = document.querySelector(".fa-arrow-right-arrow-left");
+
+        // --- FUNCTIONS ---
+
+        // Function to populate the 'from' and 'to' dropdowns with currency options
+        const populateDropdowns = () => {
+            for (let select of dropdowns) {
+                for (let currCode in countryList) {
+                    let newOption = document.createElement("option");
+                    newOption.innerText = currCode;
+                    newOption.value = currCode;
+                    // Set default selected values
+                    if (select.name === "from" && currCode === "USD") {
+                        newOption.selected = "selected";
+                    } else if (select.name === "to" && currCode === "INR") {
+                        newOption.selected = "selected";
+                    }
+                    select.append(newOption);
+                }
+
+                // When a currency is changed, only update the flag
+                select.addEventListener("change", (evt) => {
+                    updateFlag(evt.target);
+                });
+            }
+        };
+
+        // Function to update the flag image based on the selected currency
+        const updateFlag = (element) => {
+            let currCode = element.value;
+            let countryCode = countryList[currCode];
+            if (countryCode) {
+                let newSrc = `https://flagsapi.com/${countryCode}/flat/64.png`;
+                let img = element.parentElement.querySelector("img");
+                img.src = newSrc;
+            }
+        };
+
+        // Function to get and display the exchange rate from an API
+        const updateExchangeRate = async () => {
+            let amountVal = parseFloat(amountInput.value);
+            // If input is empty, invalid, or zero/negative, show an alert and don't proceed.
+            if (isNaN(amountVal) || amountVal <= 0) {
+                msg.innerText = "Please enter a valid amount.";
+                return;
+            }
+
+            msg.innerText = "Getting exchange rate...";
+
+            // Using a free, no-key-required API (Frankfurter.app)
+            const URL = `https://api.frankfurter.app/latest?amount=${amountVal}&from=${fromCurr.value}&to=${toCurr.value}`;
+            
+            try {
+                // Fetch data from the API
+                let response = await fetch(URL);
+                if (!response.ok) throw new Error("Network response was not ok.");
+
+                let data = await response.json();
+                
+                // Check if the target currency is in the response
+                if (data.rates && data.rates[toCurr.value]) {
+                    let rate = data.rates[toCurr.value];
+                    let finalAmount = rate.toFixed(2);
+                    msg.innerText = `${amountVal} ${fromCurr.value} = ${finalAmount} ${toCurr.value}`;
+                } else {
+                     // Handle case where from and to are the same
+                     if(fromCurr.value === toCurr.value){
+                        msg.innerText = `${amountVal} ${fromCurr.value} = ${amountVal.toFixed(2)} ${toCurr.value}`;
+                     } else {
+                        throw new Error("Rate not found in API response.");
+                     }
+                }
+
+            } catch (error) {
+                msg.innerText = "Couldn't fetch rate.";
+                console.error("Fetch Error:", error);
+            }
+        };
+        
+        // --- EVENT LISTENERS ---
+
+        // Event listener for the swap icon
+        swapIcon.addEventListener("click", () => {
+            // Swap selected currencies
+            let tempCode = fromCurr.value;
+            fromCurr.value = toCurr.value;
+            toCurr.value = tempCode;
+
+            // Update flags accordingly
+            updateFlag(fromCurr);
+            updateFlag(toCurr);
+            
+            // Clear previous result message
+            msg.innerText = "";
+        });
+
+        // Event listener for the form submission (button click)
+        btn.addEventListener("click", (evt) => {
+            evt.preventDefault(); // Prevents the form from submitting and refreshing the page
+            updateExchangeRate();
+        });
+
+        // Event listener to run when the page loads
+        window.addEventListener("load", () => {
+            // Only populate the dropdowns, don't fetch the rate yet
+            populateDropdowns();
+        });
+
+    </script>
+</body>
+</html>
